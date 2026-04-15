@@ -2,19 +2,15 @@
 
 # The Developer Vault
 
-**Frontend** &nbsp; `React` `Next.js` `TypeScript` `JavaScript` `Redux` `RTK` `Tailwind CSS` `SCSS`
-
-**Backend** &nbsp; `Node.js` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `REST APIs`
-
-**Auth & Testing** &nbsp; `JWT` `bcrypt` `RBAC` `Jest` `Supertest`
-
-**DevOps** &nbsp; `Docker` `GitHub Actions` `PM2` `CI/CD` `Linux`
-
 </div>
 
 <br/>
 
 ## At a Glance
+
+> **\* = Pinned on my [main profile](https://github.com/luka-tchanukvadze).**
+
+> Scroll down for detailed breakdowns of every project.
 
 | | Project | What It Is | Stack | Links |
 | :---: | :--- | :--- | :--- | :--- |
@@ -26,9 +22,23 @@
 | | **[cool-notion](https://github.com/luka-tchanukvadze/cool-notion)** | Notion workspace clone - live Markdown editor, split-pane UI | `React` `react-mde` `react-markdown` | [Demo](https://main--tangerine-dodol-1afb3d.netlify.app/) |
 | | **[GroundX](https://github.com/luka-tchanukvadze/GroundX)** | Taxi & car rental app - MapBox maps, external API integration | `Next.js` `TS` `Tailwind` `MapBox` `RapidAPI` | [Demo](https://ground-x-sigma.vercel.app/) |
 
-> **\* = Pinned on my [main profile](https://github.com/luka-tchanukvadze).** Scroll down for detailed breakdowns of every project.
 
 <br/>
+
+---
+
+<div align="center">
+
+
+**Frontend** &nbsp; `React` `Next.js` `TypeScript` `JavaScript` `Redux` `RTK` `Tailwind CSS` `SCSS`
+
+**Backend** &nbsp; `Node.js` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `REST APIs`
+
+**Auth & Testing** &nbsp; `JWT` `bcrypt` `RBAC` `Jest` `Supertest`
+
+**DevOps** &nbsp; `Docker` `GitHub Actions` `PM2` `CI/CD` `Linux`
+
+</div>
 
 ---
 
