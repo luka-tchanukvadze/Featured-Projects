@@ -2,9 +2,13 @@
 
 # The Developer Vault
 
-A curated archive of full-stack applications, backend architecture, and real-time systems.
+**Frontend** &nbsp; `React` `Next.js` `TypeScript` `JavaScript` `Redux` `RTK` `Tailwind CSS` `SCSS`
 
-`TypeScript` `React` `Next.js` `Node.js` `PostgreSQL` `MongoDB` `Redis` `Prisma` `Socket.io`
+**Backend** &nbsp; `Node.js` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `REST APIs`
+
+**Auth & Testing** &nbsp; `JWT` `bcrypt` `RBAC` `Jest` `Supertest`
+
+**DevOps** &nbsp; `Docker` `GitHub Actions` `PM2` `CI/CD` `Linux`
 
 </div>
 
