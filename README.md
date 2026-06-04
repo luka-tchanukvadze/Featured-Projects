@@ -14,7 +14,7 @@
 
 | | Project | What It Is | Stack | Links |
 | :---: | :--- | :--- | :--- | :--- |
-| **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** _(WIP)_ | Self-hosted full-stack social reading platform - 11 Prisma models, real-time messaging, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | _Demo coming_ |
+| **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** | Self-hosted full-stack social reading platform - 12 Prisma models, real-time chat with presence, recommendations, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | [**Demo**](https://coppermind.tchanu.com) |
 | **\*** | **[Natours PostgreSQL](https://github.com/luka-tchanukvadze/Natours-PostgreSQL)** | Tour booking API rebuilt from MongoDB to raw SQL - no ORM, Jest tested | `TS` `Express` `PostgreSQL` `Raw SQL` `Jest` | [**Demo**](https://natours-eight-psi.vercel.app/) / [Original](https://github.com/luka-tchanukvadze/Natours) |
 | **\*** | **[CHANU-WARS](https://github.com/luka-tchanukvadze/CHANU-WARS)** | Star Wars platform - lore wiki, shop, and 3D ship battle game | `Next.js` `TS` `Three.js` `Framer Motion` `MongoDB` | [API](https://github.com/luka-tchanukvadze/CHANU-WARS-BACK) / [Demo](https://chanu-wars.vercel.app/) |
 | | **[The Wild Oasis](https://github.com/luka-tchanukvadze/The-Wild-Oasis)** | Hotel management - admin dashboard + customer site, hybrid SSR/SSG | `Next.js` `React` `Supabase` `React Query` | [Demo](https://the-wild-oasis-two-ivory.vercel.app/) |
@@ -48,20 +48,21 @@
 
 ### $\color{#36BCF7}{\textsf{Coppermind}}$
 
-**Self-hosted full-stack social reading platform** _(work in progress)_ - [Repository](https://github.com/luka-tchanukvadze/Coppermind)
+**Self-hosted full-stack social reading platform** - [Live Demo](https://coppermind.tchanu.com) / [Repository](https://github.com/luka-tchanukvadze/Coppermind)
 
-A full-stack social book-tracking and discussion platform, currently mid-integration between the new frontend and the existing backend. The Prisma schema models 11 relational entities across four domains:
+A full-stack social book-tracking and discussion platform, live and self-hosted on a Raspberry Pi at home. The Prisma schema models 12 relational entities across five domains:
 
-- **Reading** - User, UserBook, Book with progress tracking (WANT_TO_READ / READING / READ) and private notes per book
-- **Social** - Friend request system with a full PENDING, ACCEPTED, REJECTED lifecycle
-- **Messaging** - Conversations with participant management and real-time message delivery via Socket.io
-- **Community** - Threaded discussions with comments and likes (unique constraint prevents double-likes)
+- **Reading** - User, Book, UserBook, and CustomData: progress tracking (WANT_TO_READ / READING / READ) and private or shared notes kept per book
+- **Social** - Friend request system with a full PENDING, ACCEPTED, REJECTED lifecycle and a real-time, socket-driven request badge
+- **Messaging** - Conversations with real-time delivery, multi-tab presence, typing and read state, and keyset-paginated history via Socket.io
+- **Community** - Threaded discussions with comments and likes (a unique constraint prevents double-likes)
+- **Feed** - An Activity model that powers a friends' activity feed and a three-tier recommendation engine: friends' books first, then your top genres, then what's popular
 
-Authentication uses JWT with bcrypt password hashing and email-based password reset through nodemailer. Redis handles caching. Role-based access control separates user, author, and admin permissions. The entire backend is TypeScript with Express, and the controller layer follows a handler factory pattern for DRY route logic.
+Authentication uses JWT with bcrypt password hashing and email-based password reset through nodemailer. Redis handles caching and rate-limiting on the auth endpoints. Role-based access control separates user, author, and admin permissions. The entire backend is TypeScript with Express, and the controller layer follows a handler factory pattern for DRY route logic.
 
 The frontend is Next.js 15 (App Router), Tailwind v4, shadcn-style primitives, TanStack Query for server state, and react-hook-form + Zod for forms.
 
-Deployed end-to-end on a self-hosted Raspberry Pi: GitHub Actions builds ARM64 Docker images on every push to `master`, publishes them to GHCR, and Watchtower on the Pi auto-pulls and restarts. Prisma migrations run automatically on container startup, so schema changes ship with the same `git push` as code.
+Deployed end-to-end on a self-hosted Raspberry Pi: GitHub Actions builds ARM64 Docker images on every push to `master`, publishes them to GHCR, and Watchtower on the Pi auto-pulls and restarts. Prisma migrations run automatically on container startup, so schema changes ship with the same `git push` as code. The frontend runs on Vercel; the backend is reachable through a secure tunnel with no open ports.
 
 `TypeScript` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Next.js` `TanStack Query` `Zod` `Docker` `GitHub Actions` `Raspberry Pi`
 
