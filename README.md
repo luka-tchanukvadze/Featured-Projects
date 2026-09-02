@@ -14,6 +14,7 @@
 
 | | Project | What It Is | Stack | Links |
 | :---: | :--- | :--- | :--- | :--- |
+| **\*** | **[Oathgate](https://github.com/luka-tchanukvadze/Oathgate)** | Crypto payment gateway - double-entry ledger, signed webhooks, real Bitcoin settlement across three services | `NestJS` `TS` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` | |
 | **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** | Self-hosted full-stack social reading platform - 12 Prisma models, real-time chat with presence, recommendations, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | [**Demo**](https://coppermind.tchanu.com) |
 | **\*** | **[Natours PostgreSQL](https://github.com/luka-tchanukvadze/Natours-PostgreSQL)** | Tour booking API rebuilt from MongoDB to raw SQL - no ORM, Jest tested | `TS` `Express` `PostgreSQL` `Raw SQL` `Jest` | [**Demo**](https://natours-eight-psi.vercel.app/) / [Original](https://github.com/luka-tchanukvadze/Natours) |
 | **\*** | **[CHANU-WARS](https://github.com/luka-tchanukvadze/CHANU-WARS)** | Star Wars platform - lore wiki, shop, and 3D ship battle game | `Next.js` `TS` `Three.js` `Framer Motion` `MongoDB` | [API](https://github.com/luka-tchanukvadze/CHANU-WARS-BACK) / [Demo](https://chanu-wars.vercel.app/) |
@@ -32,9 +33,9 @@
 
 **Frontend** &nbsp; `React` `Next.js` `TypeScript` `JavaScript` `Redux` `RTK` `Tailwind CSS` `SCSS`
 
-**Backend** &nbsp; `Node.js` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `REST APIs`
+**Backend** &nbsp; `Node.js` `NestJS` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `BullMQ` `REST APIs` `Microservices`
 
-**Auth & Testing** &nbsp; `JWT` `bcrypt` `RBAC` `Jest` `Supertest`
+**Auth & Testing** &nbsp; `JWT` `bcrypt` `argon2` `RBAC` `Jest` `Supertest`
 
 **DevOps** &nbsp; `Docker` `GitHub Actions` `PM2` `CI/CD` `Linux`
 
@@ -45,6 +46,32 @@
 <br/>
 
 ## Detailed Breakdowns
+
+### $\color{#36BCF7}{\textsf{Oathgate}}$
+
+**Crypto payment gateway, "Stripe for crypto"** - [Repository](https://github.com/luka-tchanukvadze/Oathgate)
+
+A payment gateway that accepts Bitcoin and settles merchant balances. It was built as a single service first, then split into three microservices sharing one library:
+
+- **API** - payment creation, live exchange rates, merchant dashboard, API key and session auth
+- **Worker** - watches the blockchain, settles payments, delivers webhooks, retries failures
+- **Notifications** - a separate service with its own database, fed by Redis pub/sub. It has no access to the payment tables at all.
+
+**Money is stored as integers, never floats.** Fiat uses minor units, so 10.50 GEL is `1050`. Crypto uses base units, so satoshis rather than decimals. Both are `Decimal(38, 0)` in Postgres and `BigInt` in TypeScript. Values are converted at the edges of the system and formatted only for display.
+
+**The ledger is double entry and append-only.** Every movement writes two rows that sum to zero, under a `SELECT ... FOR UPDATE` row lock. Rows are never updated or deleted. To undo a settlement the system writes a reversing pair, and a unique constraint stops the same entry being reversed twice. Balances are cached and can always be rebuilt by summing the entries. A concurrency test runs fifty settlements against one payment at once and asserts that exactly one pair was written.
+
+**Bitcoin settlement is real, not simulated.** Every payment gets its own address, derived from an extended public key. The private key never reaches the server. A worker polls the blockchain and settles the payment once enough blocks confirm it. It handles overpayment, underpayment, fee-bumped transactions that replace each other, and chain reorganisations that undo a payment already marked as paid.
+
+**Webhook delivery survives outages.** Deliveries are written to Postgres in the same transaction that settles the payment, then queued in Redis. If Redis is down, delivery is delayed rather than lost. Each request is signed with HMAC-SHA256, and the timestamp is part of the signature, so an old request cannot be replayed. Failed deliveries retry on a backoff schedule and end in a dead-letter log the merchant can replay from.
+
+**Payment creation is idempotent.** Every request needs an idempotency key and the request body is hashed. A retry returns the original response. The same key sent with a different body is rejected. A separate reconciliation job sums the ledger, compares it against the blockchain, and alerts on any difference.
+
+The merchant dashboard is Next.js: payments with status badges, balances, the webhook log with replay, API key management, and an AI panel that summarises recent activity. The system is deployed on a self-hosted Raspberry Pi through GitHub Actions.
+
+`NestJS` `TypeScript` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` `Docker` `GitHub Actions` `Jest`
+
+---
 
 ### $\color{#36BCF7}{\textsf{Coppermind}}$
 
