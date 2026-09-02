@@ -14,7 +14,7 @@
 
 | | Project | What It Is | Stack | Links |
 | :---: | :--- | :--- | :--- | :--- |
-| **\*** | **[Oathgate](https://github.com/luka-tchanukvadze/Oathgate)** | Crypto payment gateway - double-entry ledger, signed webhooks, real Bitcoin settlement across three services | `NestJS` `TS` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` | |
+| **\*** | **[Oathgate](https://github.com/luka-tchanukvadze/Oathgate)** | Crypto payment gateway - double-entry ledger, signed webhooks, real Bitcoin settlement across three services | `NestJS` `TS` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` | [Repository](https://github.com/luka-tchanukvadze/Oathgate) |
 | **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** | Self-hosted full-stack social reading platform - 12 Prisma models, real-time chat with presence, recommendations, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | [**Demo**](https://coppermind.tchanu.com) |
 | **\*** | **[Natours PostgreSQL](https://github.com/luka-tchanukvadze/Natours-PostgreSQL)** | Tour booking API rebuilt from MongoDB to raw SQL - no ORM, Jest tested | `TS` `Express` `PostgreSQL` `Raw SQL` `Jest` | [**Demo**](https://natours-eight-psi.vercel.app/) / [Original](https://github.com/luka-tchanukvadze/Natours) |
 | **\*** | **[CHANU-WARS](https://github.com/luka-tchanukvadze/CHANU-WARS)** | Star Wars platform - lore wiki, shop, and 3D ship battle game | `Next.js` `TS` `Three.js` `Framer Motion` `MongoDB` | [API](https://github.com/luka-tchanukvadze/CHANU-WARS-BACK) / [Demo](https://chanu-wars.vercel.app/) |
