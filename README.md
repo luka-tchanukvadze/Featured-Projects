@@ -18,6 +18,7 @@
 | **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** | Self-hosted full-stack social reading platform - 12 Prisma models, real-time chat with presence, recommendations, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | [**Demo**](https://coppermind.tchanu.com) |
 | **\*** | **[Natours PostgreSQL](https://github.com/luka-tchanukvadze/Natours-PostgreSQL)** | Tour booking API rebuilt from MongoDB to raw SQL - no ORM, Jest tested | `TS` `Express` `PostgreSQL` `Raw SQL` `Jest` | [**Demo**](https://natours-eight-psi.vercel.app/) / [Original](https://github.com/luka-tchanukvadze/Natours) |
 | **\*** | **[CHANU-WARS](https://github.com/luka-tchanukvadze/CHANU-WARS)** | Star Wars platform - lore wiki, shop, and 3D ship battle game | `Next.js` `TS` `Three.js` `Framer Motion` `MongoDB` | [API](https://github.com/luka-tchanukvadze/CHANU-WARS-BACK) / [Demo](https://chanu-wars.vercel.app/) |
+| | **[Urithiru](https://github.com/luka-tchanukvadze/Urithiru)** | Meeting room booking - swappable data layer, scheduling that cannot double-book, 119 tests | `Next.js` `TS` `TanStack Query` `Zod` `Tailwind` `Vitest` | [Demo](https://urithiru-silk.vercel.app/) |
 | | **[The Wild Oasis](https://github.com/luka-tchanukvadze/The-Wild-Oasis)** | Hotel management - admin dashboard + customer site, hybrid SSR/SSG | `Next.js` `React` `Supabase` `React Query` | [Demo](https://the-wild-oasis-two-ivory.vercel.app/) |
 | | **[Spanreed](https://github.com/luka-tchanukvadze/Spanreed)** | Real-time chat app - Socket.io, full-stack TypeScript monorepo | `TS` `React` `Socket.io` `Express` `PostgreSQL` `Prisma` | [Demo](https://spanreed.onrender.com/) |
 | | **[cool-notion](https://github.com/luka-tchanukvadze/cool-notion)** | Notion workspace clone - live Markdown editor, split-pane UI | `React` `react-mde` `react-markdown` | [Demo](https://main--tangerine-dodol-1afb3d.netlify.app/) |
@@ -35,7 +36,7 @@
 
 **Backend** &nbsp; `Node.js` `NestJS` `Express` `PostgreSQL` `MongoDB` `Prisma` `Mongoose` `Redis` `BullMQ` `REST APIs` `Microservices`
 
-**Auth & Testing** &nbsp; `JWT` `bcrypt` `argon2` `RBAC` `Jest` `Supertest`
+**Auth & Testing** &nbsp; `JWT` `bcrypt` `argon2` `RBAC` `Jest` `Supertest` `Vitest`
 
 **DevOps** &nbsp; `Docker` `GitHub Actions` `PM2` `CI/CD` `Linux`
 
@@ -118,6 +119,26 @@ Three modules in one platform: an interactive **lore wiki** where users contribu
 The frontend uses Next.js with TypeScript, Tailwind CSS, and Framer Motion for animations. The backend runs Node.js with Express and MongoDB for data persistence. The Three.js game was originally a learning exercise for integrating 3D rendering into React - a from-scratch rebuild is planned.
 
 `Next.js` `TypeScript` `Tailwind CSS` `Framer Motion` `Three.js` `Node.js` `Express` `MongoDB`
+
+---
+
+### $\color{#36BCF7}{\textsf{Urithiru}}$
+
+**Meeting room booking system with a swappable data layer** - [Repository](https://github.com/luka-tchanukvadze/Urithiru) / [Live Demo](https://urithiru-silk.vercel.app/)
+
+An internal booking app for a building of twelve meeting rooms: find a room, book it without clashing with anyone, and see what the building is doing today. There is no backend and the data lives in the browser, but nothing in the UI knows that.
+
+The rule the whole codebase hangs off is that nothing above `lib/api` knows where the data comes from. Components call query hooks, the hooks call one transport file, and that file reads an environment variable to decide whether a request goes to an in-process fake server or a real HTTP API. Both branches are typed identically, so moving to a real backend is one environment variable and deleting a folder. The fake server behaves like a server rather than a mock: it takes query strings instead of objects, returns proper status codes, adds latency so loading states are real, and validates every write with the same Zod schema and the same scheduling rules the form uses.
+
+Two meetings can never share a room. Intervals are half-open, so 13:00-14:00 and 14:00-15:00 do not clash but 14:00-14:30 and 14:15-15:00 do. The validator returns every reason a booking would be rejected in a single pass, and the form calls it as the user types while the server calls it again before writing, so the two can never disagree.
+
+Timestamps are stored as local naive strings, `2026-09-04T09:30:00` with no `Z` and no offset, because JavaScript parses that exact form as wall-clock time in every browser. A room booking is 09:30 in the office no matter who is looking at it, so the app stores labels rather than instants, and nothing is allowed to call `toISOString()`.
+
+Every filter, view mode, selected date and open panel lives in the query string, so a pasted link restores the exact view, and every value is validated on the way in. The seeded schedule is never persisted: bookings are stored as offsets from Monday and rebuilt against the current week on every load, with only the user's own changes saved, so the calendar is full whether the app is opened today or in two years.
+
+119 tests cover the scheduling rules as pure functions and drive the fake router the way the UI does: a clash is a 422, editing a finished meeting is a 409, a malformed body is a 400, storage being corrupt or full does not take the app down, and the schedule is still full when the clock is moved four months forward.
+
+`Next.js` `TypeScript` `TanStack Query` `react-hook-form` `Zod` `Tailwind CSS` `Radix` `Vitest`
 
 ---
 
