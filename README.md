@@ -49,25 +49,25 @@
 
 ### $\color{#36BCF7}{\textsf{Oathgate}}$
 
-**Crypto payment gateway, "Stripe for crypto"** - [Repository](https://github.com/luka-tchanukvadze/Oathgate)
+**Bitcoin payment gateway with a double-entry ledger** - [Repository](https://github.com/luka-tchanukvadze/Oathgate)
 
-A payment gateway that accepts Bitcoin and settles merchant balances. It was built as a single service first, then split into three microservices sharing one library:
+A payment gateway that accepts Bitcoin and settles merchant balances. A merchant creates an invoice in their own currency, the gateway quotes it in Bitcoin and issues an address, and a background worker watches the blockchain until the money arrives. Built as a single service first, then split into three microservices sharing one library:
 
 - **API** - payment creation, live exchange rates, merchant dashboard, API key and session auth
 - **Worker** - watches the blockchain, settles payments, delivers webhooks, retries failures
-- **Notifications** - a separate service with its own database, fed by Redis pub/sub. It has no access to the payment tables at all.
+- **Notifications** - a separate service with its own database, fed by Redis pub/sub, with no access to the payment tables
 
-**Money is stored as integers, never floats.** Fiat uses minor units, so 10.50 GEL is `1050`. Crypto uses base units, so satoshis rather than decimals. Both are `Decimal(38, 0)` in Postgres and `BigInt` in TypeScript. Values are converted at the edges of the system and formatted only for display.
+Each payment is issued its own address, derived from an extended public key at an index handed out by a Postgres sequence. An extended public key can generate addresses but cannot authorise spending, so the private key stays in a wallet and never reaches the server.
 
-**The ledger is double entry and append-only.** Every movement writes two rows that sum to zero, under a `SELECT ... FOR UPDATE` row lock. Rows are never updated or deleted. To undo a settlement the system writes a reversing pair, and a unique constraint stops the same entry being reversed twice. Balances are cached and can always be rebuilt by summing the entries. A concurrency test runs fifty settlements against one payment at once and asserts that exactly one pair was written.
+Bitcoin sends no notification when a payment arrives, so the worker polls the chain and records every transaction it finds against the payment. It settles once enough blocks confirm the money. The cases it handles are the ones that make crypto payments harder than card payments: overpayment, underpayment, transactions that are cancelled and re-sent with a higher fee, and chain reorganisations that drop a transaction the system had already treated as final.
 
-**Bitcoin settlement is real, not simulated.** Every payment gets its own address, derived from an extended public key. The private key never reaches the server. A worker polls the blockchain and settles the payment once enough blocks confirm it. It handles overpayment, underpayment, fee-bumped transactions that replace each other, and chain reorganisations that undo a payment already marked as paid.
+The ledger is double entry and append-only. Every movement writes two rows that sum to zero, inside a transaction holding a `SELECT ... FOR UPDATE` row lock. Rows are never updated or deleted. Undoing a settlement writes a reversing pair, and a unique constraint prevents the same entry being reversed twice. Balances are cached and can always be rebuilt by summing the entries. A test fires fifty settlements at one payment simultaneously and asserts that exactly one pair was written. Removing the row lock makes it fail with ten.
 
-**Webhook delivery survives outages.** Deliveries are written to Postgres in the same transaction that settles the payment, then queued in Redis. If Redis is down, delivery is delayed rather than lost. Each request is signed with HMAC-SHA256, and the timestamp is part of the signature, so an old request cannot be replayed. Failed deliveries retry on a backoff schedule and end in a dead-letter log the merchant can replay from.
+Money is stored as integers throughout. Fiat uses minor units, so 10.50 GEL is `1050`, and crypto uses satoshis. Both are `Decimal(38, 0)` in Postgres and `BigInt` in TypeScript, converted at the edges of the system and formatted only for display.
 
-**Payment creation is idempotent.** Every request needs an idempotency key and the request body is hashed. A retry returns the original response. The same key sent with a different body is rejected. A separate reconciliation job sums the ledger, compares it against the blockchain, and alerts on any difference.
+Webhook deliveries are written to Postgres inside the transaction that settles the payment, then queued in Redis, so a queue outage delays delivery rather than losing it. Each request is signed with HMAC-SHA256 and the timestamp is part of the signature, so an old request cannot be replayed. Failed deliveries retry on a backoff schedule and end in a dead-letter log the merchant can inspect and replay from. Payment creation is idempotent: every request needs a key, the body is hashed, and the same key sent with a different body is rejected. A reconciliation job sums the ledger, compares it against the blockchain, and alerts on any difference.
 
-The merchant dashboard is Next.js: payments with status badges, balances, the webhook log with replay, API key management, and an AI panel that summarises recent activity. The system is deployed on a self-hosted Raspberry Pi through GitHub Actions.
+The merchant dashboard is Next.js: payments with status badges, balances, the webhook log with replay, API key management, and an AI panel that summarises recent activity. Deployed on a self-hosted Raspberry Pi through GitHub Actions.
 
 `NestJS` `TypeScript` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` `Docker` `GitHub Actions` `Jest`
 
