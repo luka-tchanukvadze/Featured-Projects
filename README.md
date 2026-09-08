@@ -14,7 +14,7 @@
 
 | | Project | What It Is | Stack | Links |
 | :---: | :--- | :--- | :--- | :--- |
-| **\*** | **[Oathgate](https://github.com/luka-tchanukvadze/Oathgate)** | Crypto payment gateway - double-entry ledger, signed webhooks, real Bitcoin settlement across three services | `NestJS` `TS` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` | [Repository](https://github.com/luka-tchanukvadze/Oathgate) |
+| **\*** | **[Oathgate](https://github.com/luka-tchanukvadze/Oathgate)** | Bitcoin payment gateway - append-only double-entry ledger, idempotent API, signed webhooks, three services on a Pi | `NestJS` `TS` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` | [**Demo**](https://oathgate.tchanu.com) / [Repository](https://github.com/luka-tchanukvadze/Oathgate) |
 | **\*** | **[Coppermind](https://github.com/luka-tchanukvadze/Coppermind)** | Self-hosted full-stack social reading platform - 12 Prisma models, real-time chat with presence, recommendations, auto-deploying to a Pi | `TS` `Express` `Prisma` `PostgreSQL` `Redis` `Socket.io` `Docker` | [**Demo**](https://coppermind.tchanu.com) |
 | **\*** | **[Natours PostgreSQL](https://github.com/luka-tchanukvadze/Natours-PostgreSQL)** | Tour booking API rebuilt from MongoDB to raw SQL - no ORM, Jest tested | `TS` `Express` `PostgreSQL` `Raw SQL` `Jest` | [**Demo**](https://natours-eight-psi.vercel.app/) / [Original](https://github.com/luka-tchanukvadze/Natours) |
 | **\*** | **[CHANU-WARS](https://github.com/luka-tchanukvadze/CHANU-WARS)** | Star Wars platform - lore wiki, shop, and 3D ship battle game | `Next.js` `TS` `Three.js` `Framer Motion` `MongoDB` | [API](https://github.com/luka-tchanukvadze/CHANU-WARS-BACK) / [Demo](https://chanu-wars.vercel.app/) |
@@ -50,27 +50,39 @@
 
 ### $\color{#36BCF7}{\textsf{Oathgate}}$
 
-**Bitcoin payment gateway with a double-entry ledger** - [Repository](https://github.com/luka-tchanukvadze/Oathgate)
+**Bitcoin payment gateway with a double-entry ledger** - [Live Demo](https://oathgate.tchanu.com) / [Repository](https://github.com/luka-tchanukvadze/Oathgate)
 
-A payment gateway that accepts Bitcoin and settles merchant balances. A merchant creates an invoice in their own currency, the gateway quotes it in Bitcoin and issues an address, and a background worker watches the blockchain until the money arrives. Built as a single service first, then split into three microservices sharing one library:
+A payment gateway that accepts Bitcoin and settles merchant balances. A merchant creates an invoice in their own currency, the gateway quotes it in Bitcoin and issues an address, and a background worker watches the blockchain until the money arrives. Runs on Bitcoin **signet**, a test network where coins are free, so the whole flow can be driven end to end without real money.
+
+Built as a single service first, then split into three microservices sharing one library:
 
 - **API** - payment creation, live exchange rates, merchant dashboard, API key and session auth
 - **Worker** - watches the blockchain, settles payments, delivers webhooks, retries failures
 - **Notifications** - a separate service with its own database, fed by Redis pub/sub, with no access to the payment tables
 
-Each payment is issued its own address, derived from an extended public key at an index handed out by a Postgres sequence. An extended public key can generate addresses but cannot authorise spending, so the private key stays in a wallet and never reaches the server.
+They are split by **what starts the work** rather than by subject matter. An HTTP request has to be answered in milliseconds and watching a blockchain takes seconds, so those two cannot share a process.
 
-Bitcoin sends no notification when a payment arrives, so the worker polls the chain and records every transaction it finds against the payment. It settles once enough blocks confirm the money. The cases it handles are the ones that make crypto payments harder than card payments: overpayment, underpayment, transactions that are cancelled and re-sent with a higher fee, and chain reorganisations that drop a transaction the system had already treated as final.
+Each payment is issued its own address, derived from an extended public key at an index handed out by a Postgres sequence, because `nextval` cannot return the same number twice even under concurrent inserts. An extended public key can generate addresses but cannot authorise spending, so the private key stays in a wallet and never reaches the server.
 
-The ledger is double entry and append-only. Every movement writes two rows that sum to zero, inside a transaction holding a `SELECT ... FOR UPDATE` row lock. Rows are never updated or deleted. Undoing a settlement writes a reversing pair, and a unique constraint prevents the same entry being reversed twice. Balances are cached and can always be rebuilt by summing the entries. A test fires fifty settlements at one payment simultaneously and asserts that exactly one pair was written. Removing the row lock makes it fail with ten.
+Bitcoin sends no notification when a payment arrives, so the worker polls the chain and records every transaction it finds against the payment. Addresses are polled oldest-checked-first, so a new invoice cannot be starved by a batch of stale ones. The cases it handles are the ones that make crypto payments harder than card payments: overpayment, underpayment, and transactions cancelled and re-sent with a higher fee. It treats the explorer's answer as the whole current truth rather than a list to append to, so a replaced transaction disappears from the books instead of counting money that will never arrive. A separate sweep re-checks recently settled payments and writes a reversing pair if the money is no longer confirmed.
 
-Money is stored as integers throughout. Fiat uses minor units, so 10.50 GEL is `1050`, and crypto uses satoshis. Both are `Decimal(38, 0)` in Postgres and `BigInt` in TypeScript, converted at the edges of the system and formatted only for display.
+The ledger is double entry and append-only. Every movement writes two rows that sum to zero, inside a transaction holding a `SELECT ... FOR UPDATE` row lock. Rows are never updated or deleted. Undoing a settlement writes a reversing pair, and a unique constraint prevents the same entry being reversed twice. Balances are cached and can always be rebuilt by summing the entries. A test fires fifty settlements at one payment simultaneously and asserts that exactly one pair was written. Removing the row lock makes it fail with ten winners, no errors and no warnings.
 
-Webhook deliveries are written to Postgres inside the transaction that settles the payment, then queued in Redis, so a queue outage delays delivery rather than losing it. Each request is signed with HMAC-SHA256 and the timestamp is part of the signature, so an old request cannot be replayed. Failed deliveries retry on a backoff schedule and end in a dead-letter log the merchant can inspect and replay from. Payment creation is idempotent: every request needs a key, the body is hashed, and the same key sent with a different body is rejected. A reconciliation job sums the ledger, compares it against the blockchain, and alerts on any difference.
+Money is stored as integers throughout. Fiat uses minor units, so 10.50 GEL is `1050`, and crypto uses satoshis. Both are `Decimal(38, 0)` in Postgres rather than `BigInt`, because a Postgres `BigInt` overflows at around 9 ETH in wei. Values are converted at the edges of the system and formatted only for display, so the middle of the system only ever sees whole numbers.
 
-The merchant dashboard is Next.js: payments with status badges, balances, the webhook log with replay, API key management, and an AI panel that summarises recent activity. Deployed on a self-hosted Raspberry Pi through GitHub Actions.
+Webhook deliveries are written to Postgres inside the transaction that settles the payment, then queued in Redis, so a queue outage delays delivery rather than losing it. Each request is signed with HMAC-SHA256 and the timestamp is part of the signature, so an old request cannot be replayed. Failures retry on a backoff schedule across seven attempts spanning roughly eight hours, then land in a dead-letter log the merchant can inspect and replay from.
 
-`NestJS` `TypeScript` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` `Docker` `GitHub Actions` `Jest`
+Because a merchant chooses the URL their webhooks are sent to, the gateway is the one making the request, which is server-side request forgery if it goes unchecked. The address check is therefore performed inside the socket's own DNS resolution rather than before it, so the address that was judged is the address that gets connected to, and a name repointed between the two cannot slip through. Redirects are not followed.
+
+Payment creation is idempotent: every request needs a key, the body is hashed, the claim row is written before the work rather than after, and the same key sent with a different body is rejected rather than silently answered.
+
+The background jobs that move money write heartbeats to Redis, so a job that stops running is visible rather than silent. A public health endpoint answers in one word for an uptime checker, and the dashboard shows a banner naming what has stopped being true while a job is down.
+
+The merchant dashboard is Next.js: payments with status badges, balances shown next to the ledger entries they are derived from, the webhook log with replay, API key management, and a search box that takes a question in plain English and turns it into a filter, printing the filter it settled on so a misreading is visible rather than quietly returning the wrong rows. When the model provider is unavailable it falls back to matching text literally instead of failing.
+
+Every real design decision is written up in public notes in the repository: the architecture, the money and ledger rules, the payment lifecycle, webhooks, security, testing, and the trade-offs behind each. Deployed on a self-hosted Raspberry Pi through GitHub Actions, built on native arm64 runners, reachable through a tunnel with no inbound ports open.
+
+`NestJS` `TypeScript` `Prisma` `PostgreSQL` `Redis` `BullMQ` `Bitcoin` `Next.js` `TanStack Query` `Docker` `GitHub Actions` `Jest`
 
 ---
 
